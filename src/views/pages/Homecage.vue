@@ -1,9 +1,20 @@
 <script setup>
 import { ref, reactive, onBeforeMount, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useToast } from 'primevue/usetoast';
 
 const route = useRoute();
 const router = useRouter();
+const toast = useToast();
+
+// Editing states
+const editingField = ref(null);
+const tempValues = ref({});
+const editDialog = ref(false);
+
+// Tag management
+const addTagDialog = ref(false);
+const newTagName = ref('');
 
 // Get device ID from route params
 const deviceId = computed(() => route.params.id || 'LETH02C001');
@@ -161,13 +172,84 @@ const startingDate = ref(new Date('2025-07-22'));
 const endingDate = ref(new Date('2025-07-29'));
 
 // Functions
+function showAddTagDialog() {
+    newTagName.value = '';
+    addTagDialog.value = true;
+}
+
 function addTag() {
-    // Add tag functionality
-    console.log('Add tag clicked');
+    if (newTagName.value.trim() && !tags.value.includes(newTagName.value.trim())) {
+        tags.value.push(newTagName.value.trim());
+        toast.add({
+            severity: 'success',
+            summary: 'Tag Added',
+            detail: `Tag "${newTagName.value}" has been added`,
+            life: 3000
+        });
+        addTagDialog.value = false;
+        newTagName.value = '';
+    }
+}
+
+function removeTag(index) {
+    const removedTag = tags.value[index];
+    tags.value.splice(index, 1);
+    toast.add({
+        severity: 'info',
+        summary: 'Tag Removed',
+        detail: `Tag "${removedTag}" has been removed`,
+        life: 3000
+    });
 }
 
 function editField(field) {
-    console.log('Edit field:', field);
+    editingField.value = field;
+    tempValues.value = { ...homecageData };
+    editDialog.value = true;
+}
+
+function startInlineEdit(field) {
+    editingField.value = field;
+    tempValues.value = { ...homecageData };
+}
+
+function saveInlineEdit() {
+    // Update the actual data
+    Object.assign(homecageData, tempValues.value);
+    
+    toast.add({
+        severity: 'success',
+        summary: 'Field Updated',
+        detail: `${editingField.value} has been updated successfully`,
+        life: 3000
+    });
+    
+    cancelInlineEdit();
+}
+
+function cancelInlineEdit() {
+    editingField.value = null;
+    tempValues.value = {};
+}
+
+function saveEdit() {
+    // Update the actual data
+    Object.assign(homecageData, tempValues.value);
+    
+    toast.add({
+        severity: 'success',
+        summary: 'Field Updated',
+        detail: `${editingField.value} has been updated successfully`,
+        life: 3000
+    });
+    
+    cancelEdit();
+}
+
+function cancelEdit() {
+    editingField.value = null;
+    tempValues.value = {};
+    editDialog.value = false;
 }
 
 function deleteCage() {
@@ -247,49 +329,115 @@ watch(() => route.params.id, () => {
                     <div class="grid grid-cols-2 gap-4">
                         <div class="info-item">
                             <label class="text-sm text-gray-600">Hostname</label>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2" v-if="editingField !== 'hostname'">
                                 <span class="font-mono">{{ homecageData.hostname }}</span>
-                                <Button icon="pi pi-pencil" size="small" text @click="editField('hostname')" />
+                                <Button icon="pi pi-pencil" size="small" text @click="startInlineEdit('hostname')" />
+                            </div>
+                            <div class="flex items-center gap-2" v-else>
+                                <InputText 
+                                    v-model="tempValues.hostname" 
+                                    size="small"
+                                    @keyup.enter="saveInlineEdit"
+                                    @keyup.escape="cancelInlineEdit"
+                                    autofocus
+                                />
+                                <Button icon="pi pi-check" size="small" severity="success" @click="saveInlineEdit" />
+                                <Button icon="pi pi-times" size="small" severity="secondary" @click="cancelInlineEdit" />
                             </div>
                         </div>
                         
                         <div class="info-item">
                             <label class="text-sm text-gray-600">MAC Address</label>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2" v-if="editingField !== 'macAddress'">
                                 <span class="font-mono">{{ homecageData.macAddress }}</span>
-                                <Button icon="pi pi-pencil" size="small" text @click="editField('macAddress')" />
+                                <Button icon="pi pi-pencil" size="small" text @click="startInlineEdit('macAddress')" />
+                            </div>
+                            <div class="flex items-center gap-2" v-else>
+                                <InputText 
+                                    v-model="tempValues.macAddress" 
+                                    size="small"
+                                    @keyup.enter="saveInlineEdit"
+                                    @keyup.escape="cancelInlineEdit"
+                                    autofocus
+                                />
+                                <Button icon="pi pi-check" size="small" severity="success" @click="saveInlineEdit" />
+                                <Button icon="pi pi-times" size="small" severity="secondary" @click="cancelInlineEdit" />
                             </div>
                         </div>
                         
                         <div class="info-item">
                             <label class="text-sm text-gray-600">Location</label>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2" v-if="editingField !== 'location'">
                                 <span>{{ homecageData.location }}</span>
-                                <Button icon="pi pi-pencil" size="small" text @click="editField('location')" />
+                                <Button icon="pi pi-pencil" size="small" text @click="startInlineEdit('location')" />
+                            </div>
+                            <div class="flex items-center gap-2" v-else>
+                                <InputText 
+                                    v-model="tempValues.location" 
+                                    size="small"
+                                    @keyup.enter="saveInlineEdit"
+                                    @keyup.escape="cancelInlineEdit"
+                                    autofocus
+                                />
+                                <Button icon="pi pi-check" size="small" severity="success" @click="saveInlineEdit" />
+                                <Button icon="pi pi-times" size="small" severity="secondary" @click="cancelInlineEdit" />
                             </div>
                         </div>
                         
                         <div class="info-item">
                             <label class="text-sm text-gray-600">IP Address</label>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2" v-if="editingField !== 'ipAddress'">
                                 <span class="font-mono">{{ homecageData.ipAddress }}</span>
-                                <Button icon="pi pi-pencil" size="small" text @click="editField('ipAddress')" />
+                                <Button icon="pi pi-pencil" size="small" text @click="startInlineEdit('ipAddress')" />
+                            </div>
+                            <div class="flex items-center gap-2" v-else>
+                                <InputText 
+                                    v-model="tempValues.ipAddress" 
+                                    size="small"
+                                    @keyup.enter="saveInlineEdit"
+                                    @keyup.escape="cancelInlineEdit"
+                                    autofocus
+                                />
+                                <Button icon="pi pi-check" size="small" severity="success" @click="saveInlineEdit" />
+                                <Button icon="pi pi-times" size="small" severity="secondary" @click="cancelInlineEdit" />
                             </div>
                         </div>
                         
                         <div class="info-item">
                             <label class="text-sm text-gray-600">Version</label>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2" v-if="editingField !== 'version'">
                                 <span class="font-mono">{{ homecageData.version }}</span>
-                                <Button icon="pi pi-pencil" size="small" text @click="editField('version')" />
+                                <Button icon="pi pi-pencil" size="small" text @click="startInlineEdit('version')" />
+                            </div>
+                            <div class="flex items-center gap-2" v-else>
+                                <InputText 
+                                    v-model="tempValues.version" 
+                                    size="small"
+                                    @keyup.enter="saveInlineEdit"
+                                    @keyup.escape="cancelInlineEdit"
+                                    autofocus
+                                />
+                                <Button icon="pi pi-check" size="small" severity="success" @click="saveInlineEdit" />
+                                <Button icon="pi pi-times" size="small" severity="secondary" @click="cancelInlineEdit" />
                             </div>
                         </div>
                         
                         <div class="info-item">
                             <label class="text-sm text-gray-600">Remote Storage</label>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2" v-if="editingField !== 'remoteStorage'">
                                 <span class="text-gray-500 italic">{{ homecageData.remoteStorage }}</span>
-                                <Button icon="pi pi-pencil" size="small" text @click="editField('remoteStorage')" />
+                                <Button icon="pi pi-pencil" size="small" text @click="startInlineEdit('remoteStorage')" />
+                            </div>
+                            <div class="flex items-center gap-2" v-else>
+                                <InputText 
+                                    v-model="tempValues.remoteStorage" 
+                                    size="small"
+                                    @keyup.enter="saveInlineEdit"
+                                    @keyup.escape="cancelInlineEdit"
+                                    autofocus
+                                />
+                                <Button icon="pi pi-check" size="small" severity="success" @click="saveInlineEdit" />
+                                <Button icon="pi pi-times" size="small" severity="secondary" @click="cancelInlineEdit" />
                             </div>
                         </div>
                     </div>
@@ -298,11 +446,21 @@ watch(() => route.params.id, () => {
                     <div class="mt-6">
                         <div class="flex items-center justify-between mb-2">
                             <label class="text-sm text-gray-600">Tags</label>
-                            <Button label="+ Add Tag" size="small" text @click="addTag" />
+                            <Button label="+ Add Tag" size="small" text @click="showAddTagDialog" />
                         </div>
                         <p class="text-sm text-gray-500 italic" v-if="tags.length === 0">No tags assigned</p>
                         <div class="flex gap-2 flex-wrap" v-else>
-                            <Tag v-for="tag in tags" :key="tag" :value="tag" />
+                            <div v-for="(tag, index) in tags" :key="index" class="flex items-center">
+                                <Tag :value="tag" />
+                                <Button 
+                                    icon="pi pi-times" 
+                                    size="small" 
+                                    text 
+                                    severity="danger" 
+                                    @click="removeTag(index)"
+                                    class="ml-1"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -477,6 +635,82 @@ watch(() => route.params.id, () => {
             </div>
         </div>
     </div>
+
+    <!-- Edit Dialog -->
+    <Dialog 
+        v-model:visible="editDialog" 
+        :header="`Edit ${editingField}`" 
+        :style="{ width: '450px' }" 
+        :modal="true"
+        class="p-fluid"
+    >
+        <div class="field" v-if="editingField">
+            <label :for="editingField" class="font-semibold">{{ editingField.charAt(0).toUpperCase() + editingField.slice(1) }}</label>
+            <InputText 
+                :id="editingField"
+                v-model="tempValues[editingField]" 
+                :placeholder="`Enter new ${editingField}`"
+                class="w-full"
+                autofocus
+            />
+        </div>
+
+        <template #footer>
+            <Button 
+                label="Cancel" 
+                icon="pi pi-times" 
+                @click="cancelEdit" 
+                severity="secondary" 
+                outlined 
+            />
+            <Button 
+                label="Save" 
+                icon="pi pi-check" 
+                @click="saveEdit" 
+                severity="success" 
+            />
+        </template>
+    </Dialog>
+
+    <!-- Add Tag Dialog -->
+    <Dialog 
+        v-model:visible="addTagDialog" 
+        header="Add New Tag" 
+        :style="{ width: '400px' }" 
+        :modal="true"
+        class="p-fluid"
+    >
+        <div class="field">
+            <label for="tagName" class="font-semibold">Tag Name</label>
+            <InputText 
+                id="tagName"
+                v-model="newTagName" 
+                placeholder="Enter tag name"
+                class="w-full"
+                @keyup.enter="addTag"
+                autofocus
+            />
+        </div>
+
+        <template #footer>
+            <Button 
+                label="Cancel" 
+                icon="pi pi-times" 
+                @click="addTagDialog = false" 
+                severity="secondary" 
+                outlined 
+            />
+            <Button 
+                label="Add Tag" 
+                icon="pi pi-plus" 
+                @click="addTag" 
+                severity="success"
+                :disabled="!newTagName.trim()"
+            />
+        </template>
+    </Dialog>
+
+    <Toast />
 </template>
 
 <style scoped lang="scss">
