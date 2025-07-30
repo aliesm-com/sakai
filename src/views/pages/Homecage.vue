@@ -2,10 +2,12 @@
 import { ref, reactive, onBeforeMount, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const confirm = useConfirm();
 
 // Editing states
 const editingField = ref(null);
@@ -252,8 +254,43 @@ function cancelEdit() {
     editDialog.value = false;
 }
 
-function deleteCage() {
-    console.log('Delete cage clicked');
+function deleteCage(event) {
+    confirm.require({
+        target: event.target,
+        message: `Are you sure you want to delete HomeCage ${homecageData.hostname}? This action cannot be undone.`,
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'Cancel',
+            severity: 'secondary',
+            outlined: true
+        },
+        acceptProps: {
+            label: 'Delete',
+            severity: 'danger'
+        },
+        accept: () => {
+            // Simulate delete operation
+            toast.add({ 
+                severity: 'success', 
+                summary: 'HomeCage Deleted', 
+                detail: `HomeCage ${homecageData.hostname} has been deleted successfully`, 
+                life: 3000 
+            });
+            
+            // Redirect to homecages list after a short delay
+            setTimeout(() => {
+                router.push({ name: 'homecages' });
+            }, 1500);
+        },
+        reject: () => {
+            toast.add({ 
+                severity: 'info', 
+                summary: 'Cancelled', 
+                detail: 'Delete operation cancelled', 
+                life: 3000 
+            });
+        }
+    });
 }
 
 function playVideo() {
@@ -466,7 +503,7 @@ watch(() => route.params.id, () => {
 
                     <!-- Action Buttons -->
                     <div class="flex gap-3 mt-6">
-                        <Button icon="pi pi-trash" label="Delete Cage" severity="danger" outlined @click="deleteCage" />
+                        <Button icon="pi pi-trash" label="Delete Cage" severity="danger" outlined @click="deleteCage($event)" />
                         <Button icon="pi pi-play" label="Video Player" @click="playVideo" />
                         <Button 
                             :icon="videoStatus.isRecording ? 'pi pi-stop' : 'pi pi-circle'" 
@@ -711,6 +748,7 @@ watch(() => route.params.id, () => {
     </Dialog>
 
     <Toast />
+    <ConfirmPopup />
 </template>
 
 <style scoped lang="scss">
